@@ -2,208 +2,255 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>卡費管家 v2.2.17</title>
+    <title>卡費管家 v2.3.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; }
-        body { font-family: sans-serif; background: var(--bg); padding: 10px; color: var(--primary); margin: 0; }
-        .container { max-width: 600px; margin: auto; padding-bottom: 50px; }
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; --text: #333; }
+        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); padding: 10px; color: var(--text); margin: 0; }
+        .container { max-width: 600px; margin: auto; padding-bottom: 60px; }
+        
+        /* 頂部統計看板 */
+        .stat-card { background: linear-gradient(135deg, #2c3e50, #4ca1af); color: white; padding: 20px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 14px; }
+        
         .card { background: white; padding: 15px; border-radius: 12px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
         button:active { opacity: 0.7; transform: scale(0.98); }
-        .status-bar { font-size: 12px; text-align: center; color: #666; padding: 10px; background: #e0e0e0; border-radius: 8px; margin-bottom: 10px; font-weight: bold; }
-        .tag { font-size: 10px; padding: 2px 5px; background: #eef7ff; color: #3498db; border-radius: 4px; margin-right: 5px; }
-        .list-chip { display: flex; justify-content: space-between; background: #f0f0f0; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 13px; align-items: center; }
+        
+        /* 抽屜式樣式 */
+        .drawer { border: 1px solid #eee; border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: white; }
+        .drawer-header { padding: 15px; background: #fff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .drawer-content { display: none; padding: 0 10px 10px 10px; background: #fafafa; border-top: 1px solid #f9f9f9; }
+        .drawer.active .drawer-content { display: block; }
+        .drawer.active .drawer-header { background: #f0f7ff; }
+        
+        /* 明細列排版優化 */
+        .item-row { display: flex; align-items: center; padding: 12px 5px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .item-row:last-child { border-bottom: none; }
+        .item-checkbox { width: 22px; height: 22px; margin-right: 12px; flex-shrink: 0; }
+        .item-info { flex: 1; min-width: 0; } /* 防止文字溢出 */
+        .item-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .item-sub { font-size: 11px; color: #888; margin-top: 2px; }
+        .item-amt { font-weight: bold; color: var(--accent); margin-left: 10px; flex-shrink: 0; }
+        
+        .tag { font-size: 10px; padding: 2px 6px; background: #eef7ff; color: #3498db; border-radius: 4px; margin-left: 5px; }
+        .status-bar { font-size: 11px; text-align: center; color: #aaa; margin-bottom: 10px; }
+        .copy-btn { background: rgba(255,255,255,0.2); color: white; font-size: 12px; padding: 8px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.3); }
+        .list-chip { display: flex; justify-content: space-between; background: #f0f0f0; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 13px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align:center;">💳 卡費管家 v2.2.17</h2>
-    <div id="syncStatus" class="status-bar">📡 狀態：等待連線</div>
+    <div id="syncStatus" class="status-bar">📡 雲端連線狀態：就緒</div>
+
+    <div class="stat-card">
+        <div style="font-size: 12px; opacity: 0.9;">本月待繳總額</div>
+        <div id="total_amt" style="font-size: 32px; font-weight: bold; margin: 5px 0;">$0</div>
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0;">
+        <div style="font-size: 13px; font-weight: bold;">👤 各成員應付：</div>
+        <div class="stat-grid" id="member_stats"></div>
+        <button class="copy-btn" onclick="copyRequest()">📋 複製請款明細 (LINE)</button>
+    </div>
 
     <div class="card">
-        <textarea id="ai_text" rows="2" placeholder="貼上簡訊解析..." oninput="parseSms()"></textarea>
-        <div class="grid" style="margin-top:10px;">
-            <select id="f_card"><option value="">請先新增卡片</option></select>
+        <textarea id="ai_text" rows="1" placeholder="貼上簡訊自動解析..." oninput="parseSms()" style="margin-bottom:8px;"></textarea>
+        <div class="grid">
+            <select id="f_card"></select>
             <input type="date" id="f_date">
         </div>
         <div class="grid">
             <input type="number" id="f_amt" placeholder="金額">
             <select id="f_mem"></select>
         </div>
-        <input type="text" id="f_item" placeholder="品項備註" style="margin-bottom:8px;">
-        <button onclick="addRecord()" style="background:var(--success); color:white;">➕ 存入並同步</button>
+        <input type="text" id="f_item" placeholder="品項備註 (如：午餐)" style="margin-bottom:8px;">
+        <button onclick="addRecord()" style="background:var(--success); color:white;">💾 存入並同步雲端</button>
     </div>
 
-    <div id="main_list"></div>
+    <h3 style="margin: 20px 0 10px 5px; font-size: 16px; display: flex; align-items: center;">
+        📂 帳單明細 <small style="font-weight: normal; font-size: 12px; color: #888; margin-left: 10px;">(點擊卡片展開)</small>
+    </h3>
+    <div id="drawer_list"></div>
 
-    <div class="card">
-        <h3>💳 卡片管理</h3>
-        <div id="ui_cards"></div>
-        <input type="text" id="add_c_name" placeholder="卡片名稱">
-        <div class="grid" style="margin-top:5px;">
-            <input type="number" id="add_c_close" placeholder="結帳日">
-            <input type="number" id="add_c_pay" placeholder="扣款日">
+    <details class="card" style="font-size: 14px; background: #eee;">
+        <summary>⚙️ 系統設定與管理</summary>
+        <div style="margin-top:15px; background: white; padding: 10px; border-radius: 8px;">
+            <h4 style="margin: 0 0 10px 0;">💳 卡片清單</h4>
+            <div id="ui_cards"></div>
+            <input type="text" id="add_c_name" placeholder="卡片名稱">
+            <div class="grid" style="margin-top:5px;">
+                <input type="number" id="add_c_close" placeholder="結帳日">
+                <input type="number" id="add_c_pay" placeholder="扣款日">
+            </div>
+            <button onclick="addNewCard()" style="background:var(--primary); color:white; margin-bottom:20px;">新增卡片</button>
+            
+            <h4 style="margin: 0 0 10px 0;">👥 成員清單</h4>
+            <div id="ui_mems"></div>
+            <div class="grid">
+                <input type="text" id="add_m_name" placeholder="名稱">
+                <input type="text" id="add_m_emoji" placeholder="圖示">
+            </div>
+            <button onclick="addNewMem()" style="background:var(--accent); color:white; margin-bottom:20px;">新增成員</button>
+
+            <h4 style="margin: 0 0 10px 0;">☁️ 雲端同步金鑰</h4>
+            <input type="password" id="cfg_token" placeholder="GitHub Token">
+            <input type="text" id="cfg_gist" placeholder="Gist ID" style="margin-top:5px;">
+            <button onclick="saveAndSync()" style="background:#555; color:white; margin-top:8px;">手動強制下載</button>
         </div>
-        <button onclick="addNewCard()" style="background:var(--primary); color:white; margin-top:5px;">新增信用卡</button>
-    </div>
-
-    <div class="card">
-        <h3>👥 成員管理</h3>
-        <div id="ui_mems"></div>
-        <div class="grid">
-            <input type="text" id="add_m_name" placeholder="名稱">
-            <input type="text" id="add_m_emoji" placeholder="圖示">
-        </div>
-        <button onclick="addNewMem()" style="background:var(--accent); color:white; margin-top:5px;">新增成員</button>
-    </div>
-
-    <div class="card" style="margin-top:30px; border-top: 5px solid var(--accent); background:#fffde7;">
-        <h3>⚙️ 雲端同步設定 (Base64 安全模式)</h3>
-        <input type="password" id="cfg_token" placeholder="GitHub Token (ghp_...)">
-        <input type="text" id="cfg_gist" placeholder="Gist ID" style="margin-top:5px;">
-        <button onclick="saveAndSync()" style="background:var(--accent); color:white; margin-top:10px;">💾 儲存並強制同步</button>
-        <p style="font-size: 11px; color: #888; margin-top: 5px;">* 建議關閉手機 VPN 或 AdGuard 後再測試連線</p>
-    </div>
+    </details>
 </div>
 
 <script>
-    const DB_KEY = "CARD_DB_V2217";
-    const SET_KEY = "CARD_SET_V2217";
+    const DB_KEY = "CARD_DB_V231";
+    const SET_KEY = "CARD_SET_V231";
 
-    // 初始化資料
     let db = JSON.parse(localStorage.getItem(DB_KEY)) || { cards: {}, records: [], members: { "自己": "👤" } };
-    if (!db.members) db.members = { "自己": "👤" };
-    if (!db.records) db.records = [];
-    if (!db.cards) db.cards = {};
-
     let settings = JSON.parse(localStorage.getItem(SET_KEY)) || { token: "", gistId: "" };
 
     function updateUI() {
         localStorage.setItem(DB_KEY, JSON.stringify(db));
         render();
+        calculateStats();
     }
 
     function render() {
         const cS = document.getElementById('f_card');
         const mS = document.getElementById('f_mem');
-        if(!cS || !mS) return;
+        const cardKeys = Object.keys(db.cards);
         
-        // 卡片下拉
-        const cardNames = Object.keys(db.cards);
-        cS.innerHTML = cardNames.length ? "" : `<option value="">請先新增卡片</option>`;
-        cardNames.forEach(k => cS.innerHTML += `<option value="${k}">${k}</option>`);
+        cS.innerHTML = cardKeys.map(k => `<option value="${k}">${k}</option>`).join('') || `<option value="">請先新增卡片</option>`;
+        mS.innerHTML = Object.entries(db.members).map(([n,e]) => `<option value="${n}">${e} ${n}</option>`).join('');
+
+        const drawerDiv = document.getElementById('drawer_list');
+        drawerDiv.innerHTML = "";
         
-        // 成員下拉
-        mS.innerHTML = "";
-        Object.entries(db.members).forEach(([n,e]) => mS.innerHTML += `<option value="${n}">${e} ${n}</option>`);
-
-        // 管理 UI
-        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v]) => 
-            `<div class="list-chip"><span>💳 ${k} (結:${v.close} / 扣:${v.pay})</span> <b onclick="deleteCard('${k}')" style="color:red;cursor:pointer">✕</b></div>`).join('');
-        document.getElementById('ui_mems').innerHTML = Object.entries(db.members).map(([n,e]) => 
-            `<div class="list-chip"><span>${e} ${n}</span> <b onclick="deleteMem('${n}')" style="color:red;cursor:pointer">✕</b></div>`).join('');
-
-        // 清單
-        const list = document.getElementById('main_list');
-        list.innerHTML = "";
-        (db.records || []).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(r => {
-            list.innerHTML += `<div class="card" style="padding:10px;"><div style="display:flex;align-items:center;">
-                <input type="checkbox" ${r.settled?'checked':''} onchange="toggle(${r.id})">
-                <div style="flex:1;margin-left:10px; ${r.settled?'text-decoration:line-through;opacity:0.5':''}">
-                    <span class="tag">${r.card}</span> <b>${r.item}</b>
-                    <div style="font-size:11px;color:#888">${r.date} | ${db.members[r.debtor] || '👤'} ${r.debtor}</div>
+        cardKeys.forEach(cardName => {
+            const cardRecs = (db.records || []).filter(r => r.card === cardName && !r.settled);
+            const cardTotal = cardRecs.reduce((sum, r) => sum + parseFloat(r.amt), 0);
+            
+            const drawer = document.createElement('div');
+            drawer.className = 'drawer';
+            drawer.innerHTML = `
+                <div class="drawer-header" onclick="this.parentElement.classList.toggle('active')">
+                    <span style="font-weight: bold;">💳 ${cardName} <span class="tag">${cardRecs.length} 筆</span></span>
+                    <span style="font-weight:bold; color:var(--accent);">$${cardTotal.toLocaleString()}</span>
                 </div>
-                <div style="font-weight:bold;color:var(--accent)">$${parseFloat(r.amt).toLocaleString()}</div>
-            </div></div>`;
+                <div class="drawer-content">
+                    ${cardRecs.length ? cardRecs.map(r => `
+                        <div class="item-row">
+                            <input type="checkbox" class="item-checkbox" onchange="toggle(${r.id})">
+                            <div class="item-info">
+                                <div class="item-name">${r.item}</div>
+                                <div class="item-sub">${r.date} · ${db.members[r.debtor]||'👤'} ${r.debtor}</div>
+                            </div>
+                            <div class="item-amt">$${parseFloat(r.amt).toLocaleString()}</div>
+                        </div>
+                    `).join('') : '<div style="padding:15px; color:#ccc; text-align:center; font-size:12px;">無未結帳目</div>'}
+                </div>
+            `;
+            drawerDiv.appendChild(drawer);
         });
+
+        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v]) => `<div class="list-chip"><span>${k} (結:${v.close})</span> <b onclick="deleteCard('${k}')" style="color:red">✕</b></div>`).join('');
+        document.getElementById('ui_mems').innerHTML = Object.entries(db.members).map(([n,e]) => `<div class="list-chip"><span>${e} ${n}</span> <b onclick="deleteMem('${n}')" style="color:red">✕</b></div>`).join('');
     }
 
-    // --- 強化版 Base64 同步 ---
+    function calculateStats() {
+        const unSettled = (db.records || []).filter(r => !r.settled);
+        const total = unSettled.reduce((sum, r) => sum + parseFloat(r.amt), 0);
+        document.getElementById('total_amt').innerText = `$${total.toLocaleString()}`;
+
+        const memMap = {};
+        unSettled.forEach(r => {
+            if(r.debtor !== "自己") {
+                memMap[r.debtor] = (memMap[r.debtor] || 0) + parseFloat(r.amt);
+            }
+        });
+        document.getElementById('member_stats').innerHTML = Object.entries(memMap).map(([n, a]) => 
+            `<div>${db.members[n] || ''} ${n}: <b style="color:#ffeb3b">$${a.toLocaleString()}</b></div>`).join('') || '<div style="opacity:0.6">無他人款項</div>';
+    }
+
+    function copyRequest() {
+        const unSettled = (db.records || []).filter(r => !r.settled && r.debtor !== "自己");
+        if(unSettled.length === 0) return alert("目前沒有需要請款的項目");
+        
+        let text = "📋 【卡費代刷請款明細】\n";
+        const memMap = {};
+        unSettled.forEach(r => {
+            if(!memMap[r.debtor]) memMap[r.debtor] = [];
+            memMap[r.debtor].push(`${r.date.split('-').slice(1).join('/')} ${r.item} $${parseFloat(r.amt).toLocaleString()}`);
+        });
+
+        for(let mem in memMap) {
+            const sum = memMap[mem].reduce((s, row) => s + parseInt(row.split('$')[1].replace(/,/g,'')), 0);
+            text += `\n👤 ${mem}：\n` + memMap[mem].join('\n') + `\n💰 總計：$${sum.toLocaleString()}\n`;
+        }
+        text += "\n再麻煩匯款感謝！🙏";
+        
+        navigator.clipboard.writeText(text).then(() => alert("明細已複製到剪貼簿！"));
+    }
+
     async function saveAndSync() {
-        const t = document.getElementById('cfg_token').value.trim();
-        const g = document.getElementById('cfg_gist').value.trim();
-        if(!t || !g) return alert("請完整填寫 Token 與 ID");
-        
-        settings.token = t;
-        settings.gistId = g;
+        settings.token = document.getElementById('cfg_token').value.trim();
+        settings.gistId = document.getElementById('cfg_gist').value.trim();
         localStorage.setItem(SET_KEY, JSON.stringify(settings));
-        
-        updateStatus("⏳ 連線中...");
         try {
             const auth = "Basic " + btoa("user:" + settings.token);
-            const res = await fetch(`https://api.github.com/gists/${settings.gistId}?cb=${Date.now()}`, {
-                headers: { "Authorization": auth }
-            });
-
+            const res = await fetch(`https://api.github.com/gists/${settings.gistId}?t=${Date.now()}`, { headers: { "Authorization": auth } });
             if(res.ok) {
                 const data = await res.json();
-                const content = data.files["card_data.json"]?.content;
-                if(content) {
-                    db = JSON.parse(content);
-                    updateUI();
-                    updateStatus("✅ 下載成功");
-                } else {
-                    // 若雲端沒檔案，直接上傳一份初始資料
-                    upload();
-                    updateStatus("✅ 連線成功 (已初始化雲端)");
-                }
-            } else {
-                updateStatus(`❌ GitHub 拒絕 (${res.status})`);
+                db = JSON.parse(data.files["card_data.json"].content);
+                updateUI();
+                alert("✅ 下載成功");
             }
-        } catch(e) {
-            updateStatus("⚠️ 網路攔截 (請檢查 Token 或更換網路)");
-        }
+        } catch(e) { alert("❌ 同步失敗"); }
     }
 
     async function upload() {
         if(!settings.token || !settings.gistId) return;
-        try {
-            const auth = "Basic " + btoa("user:" + settings.token);
-            await fetch(`https://api.github.com/gists/${settings.gistId}`, {
-                method: "PATCH",
-                headers: { "Authorization": auth },
-                body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } })
-            });
-            updateStatus("✅ 雲端已同步");
-        } catch(e) { console.error(e); }
+        const auth = "Basic " + btoa("user:" + settings.token);
+        fetch(`https://api.github.com/gists/${settings.gistId}`, {
+            method: "PATCH",
+            headers: { "Authorization": auth },
+            body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } })
+        }).then(res => {
+            document.getElementById('syncStatus').innerText = res.ok ? "📡 雲端同步成功 " + new Date().toLocaleTimeString() : "📡 同步失敗";
+        });
     }
 
-    // --- 資料操控 ---
-    function addNewCard() {
-        const n = document.getElementById('add_c_name').value.trim();
-        const c = document.getElementById('add_c_close').value;
-        const p = document.getElementById('add_c_pay').value;
-        if(n && c && p) {
-            db.cards[n] = { close: parseInt(c), pay: parseInt(p) };
-            updateUI(); upload();
-            document.getElementById('add_c_name').value = "";
-        }
-    }
-    function addNewMem() {
-        const n = document.getElementById('add_m_name').value.trim();
-        const e = document.getElementById('add_m_emoji').value.trim() || "👤";
-        if(n) { db.members[n] = e; updateUI(); upload(); }
-    }
     function addRecord() {
         const amt = document.getElementById('f_amt').value;
         const card = document.getElementById('f_card').value;
-        if(!amt || !card) return alert("請填入金額並選擇卡片");
-        db.records.push({
-            id: Date.now(), card, date: document.getElementById('f_date').value,
-            amt, item: document.getElementById('f_item').value || "消費",
-            debtor: document.getElementById('f_mem').value, settled: false
-        });
-        updateUI(); upload();
+        if(!amt || !card) return alert("請輸入金額與卡片");
+        db.records.push({ id: Date.now(), card, date: document.getElementById('f_date').value, amt, item: document.getElementById('f_item').value || "消費", debtor: document.getElementById('f_mem').value, settled: false });
         document.getElementById('f_amt').value = "";
+        document.getElementById('f_item').value = "";
+        updateUI(); upload();
     }
-    function deleteCard(k) { if(confirm('確定刪除？')){ delete db.cards[k]; updateUI(); upload(); } }
-    function deleteMem(n) { if(n!=='自己' && confirm('確定刪除？')){ delete db.members[n]; updateUI(); upload(); } }
-    function toggle(id) { const r = db.records.find(x => x.id === id); if(r){ r.settled = !r.settled; updateUI(); upload(); } }
-    function updateStatus(t) { document.getElementById('syncStatus').innerText = "📡 " + t; }
+    
+    function toggle(id) { 
+        const r = db.records.find(x => x.id === id); 
+        if(r){ r.settled = true; updateUI(); upload(); } 
+    }
+    
+    function addNewCard() {
+        const n = document.getElementById('add_c_name').value.trim();
+        const c = document.getElementById('add_c_close').value;
+        if(n) { db.cards[n] = { close: c }; updateUI(); upload(); document.getElementById('add_c_name').value=""; }
+    }
+    
+    function addNewMem() {
+        const n = document.getElementById('add_m_name').value.trim();
+        const e = document.getElementById('add_m_emoji').value.trim() || "👤";
+        if(n) { db.members[n] = e; updateUI(); upload(); document.getElementById('add_m_name').value=""; }
+    }
+    
+    function deleteCard(k) { if(confirm('確定刪除卡片？')){ delete db.cards[k]; updateUI(); upload(); } }
+    function deleteMem(n) { if(n!=="自己" && confirm('確定刪除成員？')){ delete db.members[n]; updateUI(); upload(); } }
+
     function parseSms() {
         const t = document.getElementById('ai_text').value;
         const amtM = t.match(/(金額|共|NT\$|幣)\s?(\d+)|(\d+)\s?元/);
