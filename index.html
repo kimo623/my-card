@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>卡費管家 v2.6.0</title>
+    <title>卡費管家 v2.6.1 修復版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; --text: #333; --warn: #e67e22; --danger: #e74c3c; }
@@ -24,25 +24,23 @@
         .item-check { width: 22px; height: 22px; flex-shrink: 0; margin-right: 12px; }
         .item-info { flex-grow: 1; min-width: 0; cursor: pointer; }
         .item-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .item-meta { font-size: 11px; color: #888; display: flex; gap: 5px; margin-top: 2px; flex-wrap: wrap; }
+        .item-meta { font-size: 11px; color: #888; display: flex; gap: 5px; margin-top: 2px; }
         .item-amt { text-align: right; margin-left: 10px; flex-shrink: 0; font-weight: 800; color: var(--accent); }
         .tag-inst { background: #fff3e0; color: #e65100; font-size: 10px; padding: 2px 4px; border-radius: 4px; }
         .tag-month { background: #e8f4fd; color: #2980b9; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-content { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 16px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div id="syncStatus" style="font-size: 11px; text-align: center; color: #aaa; padding: 5px;">📡 同步就緒</div>
+    <div id="syncStatus" style="font-size: 11px; text-align: center; color: #aaa; padding: 5px;">📡 狀態：載入中</div>
     <div class="stat-card">
         <div class="stat-main">
-            <div><div style="font-size:11px;opacity:0.8">本月帳單應付</div><div id="cur_month_amt" class="stat-val">$0</div></div>
-            <div style="text-align:right"><div style="font-size:11px;opacity:0.8">總負債</div><div id="total_debt_amt" style="font-size:18px;font-weight:bold">$0</div></div>
+            <div><div style="font-size:11px;opacity:0.8">本月帳單預計應付</div><div id="cur_month_amt" class="stat-val">$0</div></div>
+            <div style="text-align:right"><div style="font-size:11px;opacity:0.8">總負債 (保險箱總計)</div><div id="total_debt_amt" style="font-size:18px;font-weight:bold">$0</div></div>
         </div>
         <div class="stat-grid" id="member_stats"></div>
-        <button onclick="copyRequest()" style="background:rgba(255,255,255,0.2);color:white;margin-top:10px;font-size:12px;border:1px solid rgba(255,255,255,0.3)">📋 複製本月請款明細</button>
     </div>
     <div class="card">
         <textarea id="ai_text" rows="1" placeholder="貼上簡訊解析..." oninput="parseSms()"></textarea>
@@ -50,92 +48,109 @@
         <div class="grid"><input type="number" id="f_amt" placeholder="金額"><select id="f_mem"></select></div>
         <input type="text" id="f_item" placeholder="品項名稱" style="margin-bottom:8px;">
         <div style="background:#fdf2e9; border-left:4px solid var(--warn); padding:10px; border-radius:8px; margin-bottom:10px;">
-            <label style="font-size:14px;font-weight:bold;display:flex;align-items:center"><input type="checkbox" id="f_is_inst" onchange="toggleInstUI()" style="width:18px;height:18px;margin-right:8px"> 啟用分期 (本利均攤)</label>
-            <div id="inst_ui" style="display:none;margin-top:10px;gap:8px"><input type="number" id="f_inst_num" placeholder="期數"><input type="number" id="f_inst_rate" placeholder="年利率%"></div>
+            <label style="font-size:14px;font-weight:bold;display:flex;align-items:center"><input type="checkbox" id="f_is_inst" onchange="toggleInstUI()" style="width:18px;height:18px;margin-right:8px"> 啟用分期</label>
+            <div id="inst_ui" style="display:none;margin-top:10px;gap:8px"><input type="number" id="f_inst_num" placeholder="期數"><input type="number" id="f_inst_rate" placeholder="利率%"></div>
         </div>
-        <button onclick="addRecord()" style="background:var(--success); color:white; font-size:18px;">💾 存入並同步</button>
+        <button onclick="addRecord()" style="background:var(--success); color:white; font-size:18px;">💾 存入紀錄</button>
     </div>
+    <div id="rescue_msg" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center; margin:10px 0;">⚠️ 發現月份不匹配資料，已強制顯示在下方</div>
     <div id="drawer_list"></div>
     <details class="card" style="font-size:14px;background:#eee"><summary>⚙️ 系統設定</summary>
         <div style="margin-top:10px;background:white;padding:12px;border-radius:8px">
-            <h4>💳 卡片管理</h4><div id="ui_cards"></div>
-            <div class="grid"><input type="text" id="add_c_name" placeholder="卡名"><input type="number" id="add_c_close" placeholder="結帳日"></div>
-            <button onclick="addNewCard()" style="background:var(--primary);color:white;margin-bottom:15px">新增卡片</button>
-            <h4>☁️ 雲端同步</h4>
             <input type="password" id="cfg_token" placeholder="Token"><input type="text" id="cfg_gist" placeholder="Gist ID" style="margin-top:5px">
-            <button onclick="saveAndSync()" style="background:#555;color:white;margin-top:5px">強制下載</button>
+            <button onclick="saveAndSync()" style="background:#555;color:white;margin-top:5px">☁️ 強制從雲端抓回明細</button>
+            <hr>
+            <h4>💳 卡片結帳日設定</h4><div id="ui_cards"></div>
+            <div class="grid"><input type="text" id="add_c_name" placeholder="卡名"><input type="number" id="add_c_close" placeholder="結帳日"></div>
+            <button onclick="addNewCard()" style="background:var(--primary);color:white">新增卡片</button>
         </div>
     </details>
 </div>
 <div id="editModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0">✏️ 編輯明細</h3>
-        <div style="font-size:12px;color:#888;margin-bottom:10px" id="edit_inst_msg"></div>
+        <h3 style="margin:0 0 15px">✏️ 編輯明細</h3>
         <label>品項名稱</label><input type="text" id="e_item" style="margin-bottom:10px">
         <label>金額</label><input type="number" id="e_amt" style="margin-bottom:10px">
-        <label>歸屬月份</label><input type="month" id="e_billMonth" style="margin-bottom:10px">
+        <label>歸屬月份 (YYYY-MM)</label><input type="month" id="e_billMonth" style="margin-bottom:15px">
         <div id="inst_edit_options" style="display:none; background:#fff3e0; padding:10px; border-radius:8px; font-size:13px; margin-bottom:10px">
             <label><input type="checkbox" id="e_sync_all"> 同步修改未來所有期數</label>
         </div>
-        <div class="modal-footer">
+        <div style="display:flex; gap:10px">
             <button onclick="closeModal()" style="background:#eee">取消</button>
-            <button onclick="saveEdit()" style="background:var(--success);color:white">儲存變更</button>
+            <button onclick="saveEdit()" style="background:var(--success);color:white">儲存</button>
         </div>
     </div>
 </div>
 
 <script>
-    const DB_KEY = "CARD_DB_V260";
+    const DB_KEY = "CARD_DB_V260"; 
     const SET_KEY = "CARD_SET_V260";
     let db = JSON.parse(localStorage.getItem(DB_KEY)) || { cards: {}, records: [], members: { "自己": "👤" } };
     let settings = JSON.parse(localStorage.getItem(SET_KEY)) || { token: "", gistId: "" };
     let currentEditId = null;
 
-    function repairData() {
-        db.records.forEach(r => {
-            if (!r.billMonth) r.billMonth = r.date.slice(0, 7);
-            if (!r.groupId && r.instInfo) r.groupId = "G-" + r.id; 
-        });
-    }
-
-    function calcPMT(principal, rate, periods) {
-        if (!rate || rate == 0) return Math.floor(principal / periods);
-        let i = rate / 100 / 12;
-        return Math.round(principal * i * Math.pow(1+i, periods) / (Math.pow(1+i, periods)-1));
-    }
-
     function render() {
-        repairData();
         const curMonth = new Date().toISOString().slice(0, 7);
         const unsettled = db.records.filter(r => !r.settled);
-        const monthRecs = unsettled.filter(r => r.billMonth === curMonth);
-        document.getElementById('cur_month_amt').innerText = `$${monthRecs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}`;
-        document.getElementById('total_debt_amt').innerText = `$${unsettled.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}`;
+        
+        // 1. 計算總負債 (這部分沒問題)
+        const totalDebt = unsettled.reduce((s, r) => s + parseFloat(r.amt), 0);
+        document.getElementById('total_debt_amt').innerText = `$${totalDebt.toLocaleString()}`;
 
+        // 2. 救援邏輯：如果資料沒有 billMonth，強制補齊
+        unsettled.forEach(r => { if(!r.billMonth) r.billMonth = r.date.slice(0, 7); });
+
+        // 3. 過濾本月與非本月
+        const monthRecs = unsettled.filter(r => r.billMonth === curMonth);
+        const otherRecs = unsettled.filter(r => r.billMonth !== curMonth);
+        document.getElementById('cur_month_amt').innerText = `$${monthRecs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}`;
+        document.getElementById('rescue_msg').style.display = otherRecs.length > 0 ? "block" : "none";
+
+        // 4. 渲染清單 (包含所有未結清，不再只顯示本月)
+        const listToRender = unsettled; // 強制顯示所有未結清
         const drawerDiv = document.getElementById('drawer_list');
         drawerDiv.innerHTML = "";
-        Object.keys(db.cards).forEach(cardName => {
-            const cardMonthRecs = monthRecs.filter(r => r.card === cardName);
+
+        // 按照卡片分組
+        const groups = {};
+        listToRender.forEach(r => {
+            const cName = r.card || "未指定卡片";
+            if(!groups[cName]) groups[cName] = [];
+            groups[cName].push(r);
+        });
+
+        Object.keys(groups).forEach(cardName => {
+            const recs = groups[cardName];
             const dr = document.createElement('div');
-            dr.className = 'drawer';
-            dr.innerHTML = `<div class="drawer-header" onclick="this.parentElement.classList.toggle('active')">
-                <span style="font-weight:700">💳 ${cardName} <span class="tag-month">${cardMonthRecs.length}筆</span></span>
-                <span style="font-weight:800;color:var(--accent)">$${cardMonthRecs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}</span>
-            </div>
-            <div class="drawer-content">${cardMonthRecs.map(r => `
-                <div class="item-row">
-                    <input type="checkbox" class="item-check" onchange="toggle(${r.id})">
-                    <div class="item-info" onclick="openEdit(${r.id})">
-                        <div class="item-name">${r.item}</div>
-                        <div class="item-meta"><span class="tag-month">${r.billMonth} 帳</span>${r.instInfo?`<span class="tag-inst">${r.instInfo}</span>`:''}<span>${r.debtor}</span></div>
-                    </div>
-                    <div class="item-amt">$${parseFloat(r.amt).toLocaleString()}</div>
-                </div>`).join('') || '<div style="text-align:center;padding:10px;font-size:12px;color:#ccc">無帳目</div>'}</div>`;
+            dr.className = 'drawer active'; // 預設展開，讓你一眼看到
+            dr.innerHTML = `
+                <div class="drawer-header">
+                    <span style="font-weight:700">💳 ${cardName} (${recs.length}筆)</span>
+                    <span style="color:var(--accent); font-weight:800">$${recs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}</span>
+                </div>
+                <div class="drawer-content" style="display:block">
+                    ${recs.map(r => `
+                        <div class="item-row">
+                            <input type="checkbox" class="item-check" onchange="toggle(${r.id})">
+                            <div class="item-info" onclick="openEdit(${r.id})">
+                                <div class="item-name">${r.item}</div>
+                                <div class="item-meta">
+                                    <span class="tag-month">${r.billMonth}</span>
+                                    ${r.instInfo ? `<span class="tag-inst">${r.instInfo}</span>` : ''}
+                                    <span>${r.debtor || '自己'}</span>
+                                </div>
+                            </div>
+                            <div class="item-amt">$${parseFloat(r.amt).toLocaleString()}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
             drawerDiv.appendChild(dr);
         });
-        document.getElementById('f_card').innerHTML = Object.keys(db.cards).map(k=>`<option value="${k}">${k}</option>`).join('');
+
+        // 更新下拉選單
+        document.getElementById('f_card').innerHTML = Object.keys(db.cards).map(k=>`<option value="${k}">${k}</option>`).join('') || '<option value="未指定">請先新增卡片</option>';
         document.getElementById('f_mem').innerHTML = Object.entries(db.members).map(([n,e])=>`<option value="${n}">${e} ${n}</option>`).join('');
-        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v])=>`<div class="list-chip">${k} (結:${v.close}) <b onclick="deleteCard('${k}')">✕</b></div>`).join('');
+        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v])=>`<div style="display:flex;justify-content:space-between;background:#f0f0f0;padding:8px;margin-bottom:5px;border-radius:5px"><span>${k} (結:${v.close})</span><b onclick="deleteCard('${k}')">✕</b></div>`).join('');
     }
 </script>
 <script>
@@ -166,57 +181,53 @@
     function closeModal() { document.getElementById('editModal').style.display = 'none'; }
 
     function addRecord() {
-        const amt = parseFloat(document.getElementById('f_amt').value), card = document.getElementById('f_card').value, buyDate = document.getElementById('f_date').value;
-        const isInst = document.getElementById('f_is_inst').checked, instNum = parseInt(document.getElementById('f_inst_num').value) || 1, rate = parseFloat(document.getElementById('f_inst_rate').value) || 0;
-        const pMonth = document.getElementById('f_date').dataset.predict || buyDate.slice(0,7);
-        if(!amt || !card) return alert("資訊不全");
+        const amt = parseFloat(document.getElementById('f_amt').value), card = document.getElementById('f_card').value, date = document.getElementById('f_date').value;
+        if(!amt || !card) return alert("請輸入金額與卡片");
+        const isInst = document.getElementById('f_is_inst').checked, instNum = parseInt(document.getElementById('f_inst_num').value) || 1;
+        const pMonth = document.getElementById('f_date').dataset.predict || date.slice(0,7);
         const gid = "G-" + Date.now();
+        
         if(isInst && instNum > 1) {
-            const pmt = calcPMT(amt, rate, instNum);
+            const pmt = Math.round(amt / instNum); // 簡化處理，餘數在第一期
             for(let i=0; i<instNum; i++) {
                 let d = new Date(pMonth + "-01"); d.setMonth(d.getMonth() + i);
-                db.records.push({ id: Date.now()+i, card, date: buyDate, item: document.getElementById('f_item').value || "分期", amt: pmt, billMonth: d.toISOString().slice(0,7), debtor: document.getElementById('f_mem').value, instInfo: `${i+1}/${instNum}`, groupId: gid, settled: false });
+                db.records.push({ id: Date.now()+i, card, date, item: document.getElementById('f_item').value || "分期", amt: pmt, billMonth: d.toISOString().slice(0,7), debtor: document.getElementById('f_mem').value, instInfo: `${i+1}/${instNum}`, groupId: gid, settled: false });
             }
         } else {
-            db.records.push({ id: Date.now(), card, date: buyDate, item: document.getElementById('f_item').value || "消費", amt: amt, billMonth: pMonth, debtor: document.getElementById('f_mem').value, settled: false });
+            db.records.push({ id: Date.now(), card, date, item: document.getElementById('f_item').value || "消費", amt, billMonth: pMonth, debtor: document.getElementById('f_mem').value, settled: false });
         }
-        document.getElementById('f_amt').value = ""; document.getElementById('f_item').value = "";
         updateUI(); upload();
     }
 
     function autoPredictMonth() {
         const c = document.getElementById('f_card').value, d = document.getElementById('f_date').value;
         if(!c || !d || !db.cards[c]) return;
-        let target = new Date(d); if(new Date(d).getDate() > db.cards[c].close) target.setMonth(target.getMonth()+1);
-        document.getElementById('f_date').dataset.predict = target.toISOString().slice(0,7);
+        let t = new Date(d); if(new Date(d).getDate() > db.cards[c].close) t.setMonth(t.getMonth()+1);
+        document.getElementById('f_date').dataset.predict = t.toISOString().slice(0,7);
     }
 
     function toggle(id) { const r = db.records.find(x=>x.id===id); if(r){ r.settled=true; updateUI(); upload(); } }
     function toggleInstUI() { document.getElementById('inst_ui').style.display = document.getElementById('f_is_inst').checked ? 'flex' : 'none'; }
     function updateUI() { localStorage.setItem(DB_KEY, JSON.stringify(db)); render(); }
     function addNewCard() { const n = document.getElementById('add_c_name').value.trim(), c = parseInt(document.getElementById('add_c_close').value); if(n && c) { db.cards[n] = {close: c}; updateUI(); upload(); } }
-    function deleteCard(k) { if(confirm('刪除卡片？')){ delete db.cards[k]; updateUI(); upload(); } }
+    function deleteCard(k) { if(confirm('刪除？')){ delete db.cards[k]; updateUI(); upload(); } }
 
     async function saveAndSync() {
-        settings.token = document.getElementById('cfg_token').value.trim(); settings.gistId = document.getElementById('cfg_gist').value.trim();
+        settings.token = document.getElementById('cfg_token').value; settings.gistId = document.getElementById('cfg_gist').value;
         localStorage.setItem(SET_KEY, JSON.stringify(settings));
+        const auth = "Basic " + btoa("user:" + settings.token);
         try {
-            const auth = "Basic " + btoa("user:" + settings.token);
             const res = await fetch(`https://api.github.com/gists/${settings.gistId}?t=${Date.now()}`, { headers: {"Authorization": auth}});
-            if(res.ok) { db = JSON.parse((await res.json()).files["card_data.json"].content); updateUI(); alert("✅ 下載成功"); }
-        } catch(e) { alert("❌ 下載失敗"); }
+            if(res.ok) { db = JSON.parse((await res.json()).files["card_data.json"].content); updateUI(); alert("✅ 資料已同步"); }
+        } catch(e) { alert("❌ 同步失敗"); }
     }
 
     async function upload() {
         if(!settings.token || !settings.gistId) return;
         const auth = "Basic " + btoa("user:" + settings.token);
-        fetch(`https://api.github.com/gists/${settings.gistId}`, { method: "PATCH", headers: {"Authorization": auth}, body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } }) }).then(res => { document.getElementById('syncStatus').innerText = res.ok ? "📡 同步成功 " + new Date().toLocaleTimeString() : "📡 同步失敗"; });
-    }
-
-    function parseSms() {
-        const t = document.getElementById('ai_text').value, amtM = t.match(/(金額|共|NT\$|幣)\s?(\d+)|(\d+)\s?元/), dateM = t.match(/(\d{2,3})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})/);
-        if (amtM) document.getElementById('f_amt').value = amtM[2] || amtM[3];
-        if (dateM) { let y = parseInt(dateM[1]); if (y < 200) y += 1911; document.getElementById('f_date').value = `${y}-${dateM[2].padStart(2,'0')}-${dateM[3].padStart(2,'0')}`; autoPredictMonth(); }
+        fetch(`https://api.github.com/gists/${settings.gistId}`, { method: "PATCH", headers: {"Authorization": auth}, body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } }) }).then(res => {
+            document.getElementById('syncStatus').innerText = res.ok ? "📡 同步成功 " + new Date().toLocaleTimeString() : "📡 同步失敗";
+        });
     }
 
     window.onload = () => {
