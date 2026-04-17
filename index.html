@@ -2,373 +2,226 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>卡費管家 v2.5.0</title>
+    <title>卡費管家 v2.6.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; --text: #333; --warn: #e67e22; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; line-height: 1.4; }
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; --text: #333; --warn: #e67e22; --danger: #e74c3c; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; }
         .container { max-width: 600px; margin: auto; padding-bottom: 80px; }
-        
-        /* 頂部統計看板 - 強化版 */
         .stat-card { background: linear-gradient(135deg, #2c3e50, #4ca1af); color: white; padding: 18px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .stat-main { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
-        .stat-val { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
-        .stat-sub { font-size: 11px; opacity: 0.8; }
+        .stat-val { font-size: 28px; font-weight: 800; }
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-        
         .card { background: white; padding: 15px; border-radius: 12px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; }
-        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
-        button:active { transform: scale(0.98); opacity: 0.8; }
-
-        /* 分期設定區樣式 */
-        .inst-box { background: #fdf2e9; border-left: 4px solid var(--warn); padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-        
-        /* 抽屜明細樣式 - 修正 S26U 擠壓問題 */
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .drawer { border: 1px solid #eee; border-radius: 10px; margin-bottom: 10px; background: white; overflow: hidden; }
         .drawer-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .drawer-content { display: none; padding: 0 10px 10px; background: #fafafa; border-top: 1px solid #f9f9f9; }
         .drawer.active .drawer-content { display: block; }
-        
         .item-row { display: flex; align-items: center; padding: 12px 5px; border-bottom: 1px solid #eee; }
-        .item-check { width: 22px; height: 22px; flex-shrink: 0; margin-right: 10px; }
-        .item-info { flex-grow: 1; min-width: 0; }
-        .item-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-meta { font-size: 11px; color: #888; display: flex; align-items: center; gap: 5px; margin-top: 2px; }
-        .item-amt { text-align: right; margin-left: 10px; flex-shrink: 0; }
-        .amt-val { font-weight: 800; color: var(--accent); font-size: 16px; }
-        
-        /* 標籤樣式 */
-        .tag-inst { background: #fff3e0; color: #e65100; font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
-        .tag-month { background: #e8f4fd; color: #2980b9; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
-        
-        .copy-btn { background: rgba(255,255,255,0.15); color: white; font-size: 12px; padding: 8px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.2); }
-        .list-chip { display: flex; justify-content: space-between; background: #f0f0f0; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 13px; }
+        .item-check { width: 22px; height: 22px; flex-shrink: 0; margin-right: 12px; }
+        .item-info { flex-grow: 1; min-width: 0; cursor: pointer; }
+        .item-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .item-meta { font-size: 11px; color: #888; display: flex; gap: 5px; margin-top: 2px; flex-wrap: wrap; }
+        .item-amt { text-align: right; margin-left: 10px; flex-shrink: 0; font-weight: 800; color: var(--accent); }
+        .tag-inst { background: #fff3e0; color: #e65100; font-size: 10px; padding: 2px 4px; border-radius: 4px; }
+        .tag-month { background: #e8f4fd; color: #2980b9; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div id="syncStatus" style="font-size: 11px; text-align: center; color: #aaa; padding: 5px;">📡 雲端狀態：就緒</div>
-
+    <div id="syncStatus" style="font-size: 11px; text-align: center; color: #aaa; padding: 5px;">📡 同步就緒</div>
     <div class="stat-card">
         <div class="stat-main">
-            <div>
-                <div class="stat-sub">本月帳單應付</div>
-                <div id="cur_month_amt" class="stat-val">$0</div>
-            </div>
-            <div style="text-align: right;">
-                <div class="stat-sub">總負債 (含未來分期)</div>
-                <div id="total_debt_amt" style="font-size: 18px; font-weight: bold;">$0</div>
-            </div>
+            <div><div style="font-size:11px;opacity:0.8">本月帳單應付</div><div id="cur_month_amt" class="stat-val">$0</div></div>
+            <div style="text-align:right"><div style="font-size:11px;opacity:0.8">總負債</div><div id="total_debt_amt" style="font-size:18px;font-weight:bold">$0</div></div>
         </div>
         <div class="stat-grid" id="member_stats"></div>
-        <button class="copy-btn" onclick="copyRequest()">📋 複製本月請款明細 (LINE)</button>
+        <button onclick="copyRequest()" style="background:rgba(255,255,255,0.2);color:white;margin-top:10px;font-size:12px;border:1px solid rgba(255,255,255,0.3)">📋 複製本月請款明細</button>
     </div>
-
     <div class="card">
-        <textarea id="ai_text" rows="1" placeholder="貼上簡訊解析..." oninput="parseSms()" style="margin-bottom:8px;"></textarea>
-        <div class="grid">
-            <select id="f_card" onchange="autoPredictMonth()"></select>
-            <input type="date" id="f_date" onchange="autoPredictMonth()">
+        <textarea id="ai_text" rows="1" placeholder="貼上簡訊解析..." oninput="parseSms()"></textarea>
+        <div class="grid" style="margin-top:8px;"><select id="f_card" onchange="autoPredictMonth()"></select><input type="date" id="f_date" onchange="autoPredictMonth()"></div>
+        <div class="grid"><input type="number" id="f_amt" placeholder="金額"><select id="f_mem"></select></div>
+        <input type="text" id="f_item" placeholder="品項名稱" style="margin-bottom:8px;">
+        <div style="background:#fdf2e9; border-left:4px solid var(--warn); padding:10px; border-radius:8px; margin-bottom:10px;">
+            <label style="font-size:14px;font-weight:bold;display:flex;align-items:center"><input type="checkbox" id="f_is_inst" onchange="toggleInstUI()" style="width:18px;height:18px;margin-right:8px"> 啟用分期 (本利均攤)</label>
+            <div id="inst_ui" style="display:none;margin-top:10px;gap:8px"><input type="number" id="f_inst_num" placeholder="期數"><input type="number" id="f_inst_rate" placeholder="年利率%"></div>
         </div>
-        <div class="grid">
-            <input type="number" id="f_amt" placeholder="金額">
-            <select id="f_mem"></select>
-        </div>
-        <input type="text" id="f_item" placeholder="品項備註" style="margin-bottom:8px;">
-        
-        <div class="inst-box">
-            <label style="font-size: 14px; font-weight: bold; display: flex; align-items: center;">
-                <input type="checkbox" id="f_is_inst" onchange="toggleInstUI()" style="width:18px; height:18px; margin-right:8px;"> 啟用分期 (本利均攤)
-            </label>
-            <div id="inst_ui" style="display: none; margin-top: 10px; gap: 8px; align-items: center;">
-                <input type="number" id="f_inst_num" placeholder="期數" style="flex:1;">
-                <input type="number" id="f_inst_rate" placeholder="年利率 %" style="flex:1;">
-            </div>
-        </div>
-        
-        <button onclick="addRecord()" style="background:var(--success); color:white; font-size:18px;">💾 存入並同步雲端</button>
-    </div>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 5px 10px;">
-        <h3 style="margin:0; font-size:16px;">📂 帳單明細</h3>
-        <div style="font-size: 12px; color: var(--accent); font-weight: bold;" id="view_month_label"></div>
+        <button onclick="addRecord()" style="background:var(--success); color:white; font-size:18px;">💾 存入並同步</button>
     </div>
     <div id="drawer_list"></div>
-
-    <details class="card" style="font-size: 14px; background: #eee;">
-        <summary>⚙️ 系統管理</summary>
-        <div style="margin-top:10px; background:white; padding:12px; border-radius:8px;">
-            <h4>💳 卡片/結帳日</h4><div id="ui_cards"></div>
-            <div class="grid">
-                <input type="text" id="add_c_name" placeholder="卡名">
-                <input type="number" id="add_c_close" placeholder="結帳日">
-            </div>
-            <button onclick="addNewCard()" style="background:var(--primary); color:white; margin-bottom:15px;">新增卡片</button>
-            <h4>👥 成員</h4><div id="ui_mems"></div>
-            <div class="grid"><input type="text" id="add_m_name" placeholder="名稱"><input type="text" id="add_m_emoji" placeholder="圖示"></div>
-            <button onclick="addNewMem()" style="background:var(--accent); color:white; margin-bottom:15px;">新增成員</button>
-            <h4>☁️ 同步</h4>
-            <input type="password" id="cfg_token" placeholder="Token"><input type="text" id="cfg_gist" placeholder="Gist ID" style="margin-top:5px;">
-            <button onclick="saveAndSync()" style="background:#555; color:white; margin-top:5px;">強制下載</button>
+    <details class="card" style="font-size:14px;background:#eee"><summary>⚙️ 系統設定</summary>
+        <div style="margin-top:10px;background:white;padding:12px;border-radius:8px">
+            <h4>💳 卡片管理</h4><div id="ui_cards"></div>
+            <div class="grid"><input type="text" id="add_c_name" placeholder="卡名"><input type="number" id="add_c_close" placeholder="結帳日"></div>
+            <button onclick="addNewCard()" style="background:var(--primary);color:white;margin-bottom:15px">新增卡片</button>
+            <h4>☁️ 雲端同步</h4>
+            <input type="password" id="cfg_token" placeholder="Token"><input type="text" id="cfg_gist" placeholder="Gist ID" style="margin-top:5px">
+            <button onclick="saveAndSync()" style="background:#555;color:white;margin-top:5px">強制下載</button>
         </div>
     </details>
 </div>
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0">✏️ 編輯明細</h3>
+        <div style="font-size:12px;color:#888;margin-bottom:10px" id="edit_inst_msg"></div>
+        <label>品項名稱</label><input type="text" id="e_item" style="margin-bottom:10px">
+        <label>金額</label><input type="number" id="e_amt" style="margin-bottom:10px">
+        <label>歸屬月份</label><input type="month" id="e_billMonth" style="margin-bottom:10px">
+        <div id="inst_edit_options" style="display:none; background:#fff3e0; padding:10px; border-radius:8px; font-size:13px; margin-bottom:10px">
+            <label><input type="checkbox" id="e_sync_all"> 同步修改未來所有期數</label>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal()" style="background:#eee">取消</button>
+            <button onclick="saveEdit()" style="background:var(--success);color:white">儲存變更</button>
+        </div>
+    </div>
+</div>
 
 <script>
-    const DB_KEY = "CARD_DB_V250";
-    const SET_KEY = "CARD_SET_V250";
-
+    const DB_KEY = "CARD_DB_V260";
+    const SET_KEY = "CARD_SET_V260";
     let db = JSON.parse(localStorage.getItem(DB_KEY)) || { cards: {}, records: [], members: { "自己": "👤" } };
     let settings = JSON.parse(localStorage.getItem(SET_KEY)) || { token: "", gistId: "" };
+    let currentEditId = null;
 
-    // --- 核心運算：本利均攤 ---
-    function calcPMT(principal, annualRate, periods) {
-        if (annualRate === 0) return Math.floor(principal / periods);
-        let monthlyRate = annualRate / 100 / 12;
-        return Math.round(principal * (monthlyRate * Math.pow(1 + monthlyRate, periods)) / (Math.pow(1 + monthlyRate, periods) - 1));
+    function repairData() {
+        db.records.forEach(r => {
+            if (!r.billMonth) r.billMonth = r.date.slice(0, 7);
+            if (!r.groupId && r.instInfo) r.groupId = "G-" + r.id; 
+        });
     }
 
-    function toggleInstUI() {
-        document.getElementById('inst_ui').style.display = document.getElementById('f_is_inst').checked ? 'flex' : 'none';
-    }
-
-    // --- 智能月份預判 ---
-    function autoPredictMonth() {
-        const cardName = document.getElementById('f_card').value;
-        const dateVal = document.getElementById('f_date').value;
-        if (!cardName || !dateVal || !db.cards[cardName]) return;
-
-        const day = new Date(dateVal).getDate();
-        const closeDay = db.cards[cardName].close;
-        let targetDate = new Date(dateVal);
-
-        // 如果超過結帳日，歸入下個月
-        if (day > closeDay) {
-            targetDate.setMonth(targetDate.getMonth() + 1);
-        }
-        // 暫存預判月份到欄位屬性中 (不干擾 UI)
-        document.getElementById('f_date').dataset.predict = targetDate.toISOString().slice(0, 7);
-    }
-
-    function updateUI() {
-        localStorage.setItem(DB_KEY, JSON.stringify(db));
-        render();
+    function calcPMT(principal, rate, periods) {
+        if (!rate || rate == 0) return Math.floor(principal / periods);
+        let i = rate / 100 / 12;
+        return Math.round(principal * i * Math.pow(1+i, periods) / (Math.pow(1+i, periods)-1));
     }
 
     function render() {
-        const cS = document.getElementById('f_card');
-        const mS = document.getElementById('f_mem');
-        const cardKeys = Object.keys(db.cards);
-        cS.innerHTML = cardKeys.map(k => `<option value="${k}">${k}</option>`).join('') || `<option>請先加卡</option>`;
-        mS.innerHTML = Object.entries(db.members).map(([n,e]) => `<option value="${n}">${e} ${n}</option>`).join('');
+        repairData();
+        const curMonth = new Date().toISOString().slice(0, 7);
+        const unsettled = db.records.filter(r => !r.settled);
+        const monthRecs = unsettled.filter(r => r.billMonth === curMonth);
+        document.getElementById('cur_month_amt').innerText = `$${monthRecs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}`;
+        document.getElementById('total_debt_amt').innerText = `$${unsettled.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}`;
 
         const drawerDiv = document.getElementById('drawer_list');
         drawerDiv.innerHTML = "";
-        
-        const curMonth = new Date().toISOString().slice(0, 7);
-        document.getElementById('view_month_label').innerText = `${curMonth} 帳單`;
-
-        let totalCurrent = 0;
-        let totalDebt = 0;
-        let memberCurrent = {};
-
-        cardKeys.forEach(cardName => {
-            // 篩選出該卡片所有未結清的紀錄
-            const allUnsettled = db.records.filter(r => r.card === cardName && !r.settled);
-            
-            // 計算本月應付 (歸屬月份 = 當前月份)
-            const monthRecs = allUnsettled.filter(r => r.billMonth === curMonth);
-            const monthTotal = monthRecs.reduce((sum, r) => sum + parseFloat(r.amt), 0);
-            
-            totalCurrent += monthTotal;
-            totalDebt += allUnsettled.reduce((sum, r) => sum + parseFloat(r.amt), 0);
-
-            // 統計成員本月應付
-            monthRecs.forEach(r => {
-                if(r.debtor !== "自己") memberCurrent[r.debtor] = (memberCurrent[r.debtor] || 0) + parseFloat(r.amt);
-            });
-
-            const drawer = document.createElement('div');
-            drawer.className = 'drawer';
-            drawer.innerHTML = `
-                <div class="drawer-header" onclick="this.parentElement.classList.toggle('active')">
-                    <span style="font-weight:700;">💳 ${cardName} <span class="tag-inst" style="background:#eee;color:#666">${monthRecs.length}筆</span></span>
-                    <span class="amt-val">$${monthTotal.toLocaleString()}</span>
-                </div>
-                <div class="drawer-content">
-                    ${monthRecs.map(r => `
-                        <div class="item-row">
-                            <input type="checkbox" class="item-check" onchange="toggle(${r.id})">
-                            <div class="item-info">
-                                <div class="item-name">${r.item}</div>
-                                <div class="item-meta">
-                                    <span class="tag-month" onclick="shiftMonth(${r.id})">${r.billMonth} 帳</span>
-                                    ${r.instInfo ? `<span class="tag-inst">${r.instInfo}</span>` : ''}
-                                    <span>${db.members[r.debtor]||''} ${r.debtor}</span>
-                                </div>
-                            </div>
-                            <div class="item-amt"><div class="amt-val" style="font-size:14px;">$${parseFloat(r.amt).toLocaleString()}</div></div>
-                        </div>
-                    `).join('') || '<div style="text-align:center;padding:10px;font-size:12px;color:#ccc;">本月無帳目</div>'}
-                </div>
-            `;
-            drawerDiv.appendChild(drawer);
+        Object.keys(db.cards).forEach(cardName => {
+            const cardMonthRecs = monthRecs.filter(r => r.card === cardName);
+            const dr = document.createElement('div');
+            dr.className = 'drawer';
+            dr.innerHTML = `<div class="drawer-header" onclick="this.parentElement.classList.toggle('active')">
+                <span style="font-weight:700">💳 ${cardName} <span class="tag-month">${cardMonthRecs.length}筆</span></span>
+                <span style="font-weight:800;color:var(--accent)">$${cardMonthRecs.reduce((s,r)=>s+parseFloat(r.amt),0).toLocaleString()}</span>
+            </div>
+            <div class="drawer-content">${cardMonthRecs.map(r => `
+                <div class="item-row">
+                    <input type="checkbox" class="item-check" onchange="toggle(${r.id})">
+                    <div class="item-info" onclick="openEdit(${r.id})">
+                        <div class="item-name">${r.item}</div>
+                        <div class="item-meta"><span class="tag-month">${r.billMonth} 帳</span>${r.instInfo?`<span class="tag-inst">${r.instInfo}</span>`:''}<span>${r.debtor}</span></div>
+                    </div>
+                    <div class="item-amt">$${parseFloat(r.amt).toLocaleString()}</div>
+                </div>`).join('') || '<div style="text-align:center;padding:10px;font-size:12px;color:#ccc">無帳目</div>'}</div>`;
+            drawerDiv.appendChild(dr);
         });
-
-        document.getElementById('cur_month_amt').innerText = `$${totalCurrent.toLocaleString()}`;
-        document.getElementById('total_debt_amt').innerText = `$${totalDebt.toLocaleString()}`;
-        document.getElementById('member_stats').innerHTML = Object.entries(memberCurrent).map(([n, a]) => 
-            `<div>${db.members[n] || ''} ${n}: <b style="color:#ffeb3b">$${a.toLocaleString()}</b></div>`).join('') || '<div>無人欠款</div>';
-
-        // 管理 UI
-        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v]) => `<div class="list-chip">${k} (結帳:${v.close}) <b onclick="deleteCard('${k}')">✕</b></div>`).join('');
-        document.getElementById('ui_mems').innerHTML = Object.entries(db.members).map(([n,e]) => `<div class="list-chip">${e} ${n} <b onclick="deleteMem('${n}')">✕</b></div>`).join('');
+        document.getElementById('f_card').innerHTML = Object.keys(db.cards).map(k=>`<option value="${k}">${k}</option>`).join('');
+        document.getElementById('f_mem').innerHTML = Object.entries(db.members).map(([n,e])=>`<option value="${n}">${e} ${n}</option>`).join('');
+        document.getElementById('ui_cards').innerHTML = Object.entries(db.cards).map(([k,v])=>`<div class="list-chip">${k} (結:${v.close}) <b onclick="deleteCard('${k}')">✕</b></div>`).join('');
+    }
+</script>
+<script>
+    function openEdit(id) {
+        currentEditId = id;
+        const r = db.records.find(x => x.id === id);
+        document.getElementById('e_item').value = r.item;
+        document.getElementById('e_amt').value = r.amt;
+        document.getElementById('e_billMonth').value = r.billMonth;
+        document.getElementById('inst_edit_options').style.display = r.groupId ? 'block' : 'none';
+        document.getElementById('editModal').style.display = 'flex';
     }
 
+    function saveEdit() {
+        const r = db.records.find(x => x.id === currentEditId);
+        const syncAll = document.getElementById('e_sync_all').checked;
+        const newAmt = parseFloat(document.getElementById('e_amt').value);
+        const newItem = document.getElementById('e_item').value;
+        const newMonth = document.getElementById('e_billMonth').value;
+        if(r.groupId && syncAll) {
+            db.records.filter(x => x.groupId === r.groupId && !x.settled).forEach(x => { x.item = newItem; x.amt = newAmt; });
+        } else {
+            r.item = newItem; r.amt = newAmt; r.billMonth = newMonth;
+        }
+        closeModal(); updateUI(); upload();
+    }
+
+    function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+
     function addRecord() {
-        const principal = parseFloat(document.getElementById('f_amt').value);
-        const card = document.getElementById('f_card').value;
-        const isInst = document.getElementById('f_is_inst').checked;
-        const instNum = parseInt(document.getElementById('f_inst_num').value) || 1;
-        const annualRate = parseFloat(document.getElementById('f_inst_rate').value) || 0;
-        const buyDate = document.getElementById('f_date').value;
-        const predictedMonth = document.getElementById('f_date').dataset.predict || buyDate.slice(0,7);
-
-        if(!principal || !card) return alert("請輸入金額與卡片");
-
+        const amt = parseFloat(document.getElementById('f_amt').value), card = document.getElementById('f_card').value, buyDate = document.getElementById('f_date').value;
+        const isInst = document.getElementById('f_is_inst').checked, instNum = parseInt(document.getElementById('f_inst_num').value) || 1, rate = parseFloat(document.getElementById('f_inst_rate').value) || 0;
+        const pMonth = document.getElementById('f_date').dataset.predict || buyDate.slice(0,7);
+        if(!amt || !card) return alert("資訊不全");
+        const gid = "G-" + Date.now();
         if(isInst && instNum > 1) {
-            const pmt = calcPMT(principal, annualRate, instNum);
-            let totalToPay = pmt * instNum;
-            let firstAmt = pmt + ( (principal * (1 + (annualRate/100))) > totalToPay ? 0 : 0); // 這裡簡化處理，將利息併入
-            
-            // 真正精確的做法：總額利息本利和
-            // 為了方便對帳，我們補齊差額到第一期
-            // 此處採用最直覺的本利均攤：
-            for(let i = 0; i < instNum; i++) {
-                let billDate = new Date(predictedMonth + "-01");
-                billDate.setMonth(billDate.getMonth() + i);
-                db.records.push({
-                    id: Date.now() + i,
-                    card,
-                    date: buyDate,
-                    billMonth: billDate.toISOString().slice(0, 7),
-                    amt: pmt,
-                    item: document.getElementById('f_item').value || "分期消費",
-                    debtor: document.getElementById('f_mem').value,
-                    instInfo: `${i+1}/${instNum}`,
-                    settled: false
-                });
+            const pmt = calcPMT(amt, rate, instNum);
+            for(let i=0; i<instNum; i++) {
+                let d = new Date(pMonth + "-01"); d.setMonth(d.getMonth() + i);
+                db.records.push({ id: Date.now()+i, card, date: buyDate, item: document.getElementById('f_item').value || "分期", amt: pmt, billMonth: d.toISOString().slice(0,7), debtor: document.getElementById('f_mem').value, instInfo: `${i+1}/${instNum}`, groupId: gid, settled: false });
             }
         } else {
-            db.records.push({
-                id: Date.now(), card, date: buyDate,
-                billMonth: predictedMonth,
-                amt: principal, item: document.getElementById('f_item').value || "消費",
-                debtor: document.getElementById('f_mem').value, settled: false
-            });
+            db.records.push({ id: Date.now(), card, date: buyDate, item: document.getElementById('f_item').value || "消費", amt: amt, billMonth: pMonth, debtor: document.getElementById('f_mem').value, settled: false });
         }
-        
-        document.getElementById('f_amt').value = "";
-        document.getElementById('f_item').value = "";
+        document.getElementById('f_amt').value = ""; document.getElementById('f_item').value = "";
         updateUI(); upload();
     }
 
-    function shiftMonth(id) {
-        const r = db.records.find(x => x.id === id);
-        if(!r) return;
-        let d = new Date(r.billMonth + "-01");
-        d.setMonth(d.getMonth() + 1);
-        if (confirm(`將此筆挪到下個月 (${d.toISOString().slice(0,7)}) 帳單？`)) {
-            r.billMonth = d.toISOString().slice(0, 7);
-            updateUI(); upload();
-        }
+    function autoPredictMonth() {
+        const c = document.getElementById('f_card').value, d = document.getElementById('f_date').value;
+        if(!c || !d || !db.cards[c]) return;
+        let target = new Date(d); if(new Date(d).getDate() > db.cards[c].close) target.setMonth(target.getMonth()+1);
+        document.getElementById('f_date').dataset.predict = target.toISOString().slice(0,7);
     }
 
-    function toggle(id) { 
-        const r = db.records.find(x => x.id === id); 
-        if(r){ r.settled = true; updateUI(); upload(); } 
-    }
+    function toggle(id) { const r = db.records.find(x=>x.id===id); if(r){ r.settled=true; updateUI(); upload(); } }
+    function toggleInstUI() { document.getElementById('inst_ui').style.display = document.getElementById('f_is_inst').checked ? 'flex' : 'none'; }
+    function updateUI() { localStorage.setItem(DB_KEY, JSON.stringify(db)); render(); }
+    function addNewCard() { const n = document.getElementById('add_c_name').value.trim(), c = parseInt(document.getElementById('add_c_close').value); if(n && c) { db.cards[n] = {close: c}; updateUI(); upload(); } }
+    function deleteCard(k) { if(confirm('刪除卡片？')){ delete db.cards[k]; updateUI(); upload(); } }
 
     async function saveAndSync() {
-        settings.token = document.getElementById('cfg_token').value.trim();
-        settings.gistId = document.getElementById('cfg_gist').value.trim();
+        settings.token = document.getElementById('cfg_token').value.trim(); settings.gistId = document.getElementById('cfg_gist').value.trim();
         localStorage.setItem(SET_KEY, JSON.stringify(settings));
         try {
             const auth = "Basic " + btoa("user:" + settings.token);
-            const res = await fetch(`https://api.github.com/gists/${settings.gistId}?cb=${Date.now()}`, { headers: {"Authorization": auth}});
-            if(res.ok) {
-                const data = await res.json();
-                db = JSON.parse(data.files["card_data.json"].content);
-                updateUI(); alert("✅ 下載成功");
-            }
-        } catch(e) { alert("❌ 同步失敗"); }
+            const res = await fetch(`https://api.github.com/gists/${settings.gistId}?t=${Date.now()}`, { headers: {"Authorization": auth}});
+            if(res.ok) { db = JSON.parse((await res.json()).files["card_data.json"].content); updateUI(); alert("✅ 下載成功"); }
+        } catch(e) { alert("❌ 下載失敗"); }
     }
 
     async function upload() {
         if(!settings.token || !settings.gistId) return;
         const auth = "Basic " + btoa("user:" + settings.token);
-        fetch(`https://api.github.com/gists/${settings.gistId}`, {
-            method: "PATCH",
-            headers: {"Authorization": auth},
-            body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } })
-        }).then(res => {
-            document.getElementById('syncStatus').innerText = res.ok ? "📡 雲端同步成功 " + new Date().toLocaleTimeString() : "📡 同步失敗";
-        });
-    }
-
-    function addNewCard() {
-        const n = document.getElementById('add_c_name').value.trim();
-        const c = parseInt(document.getElementById('add_c_close').value);
-        if(n && c) { db.cards[n] = { close: c }; updateUI(); upload(); }
-    }
-    function addNewMem() {
-        const n = document.getElementById('add_m_name').value.trim();
-        const e = document.getElementById('add_m_emoji').value.trim() || "👤";
-        if(n) { db.members[n] = e; updateUI(); upload(); }
-    }
-    function deleteCard(k) { if(confirm('刪除卡片？')){ delete db.cards[k]; updateUI(); upload(); } }
-    function deleteMem(n) { if(n!=="自己"){ delete db.members[n]; updateUI(); upload(); } }
-
-    function copyRequest() {
-        const curMonth = new Date().toISOString().slice(0, 7);
-        const unSettled = db.records.filter(r => !r.settled && r.debtor !== "自己" && r.billMonth === curMonth);
-        if(unSettled.length === 0) return alert("本月無他人帳目");
-        let text = `📋 【${curMonth} 帳單請款】\n`;
-        const memMap = {};
-        unSettled.forEach(r => {
-            if(!memMap[r.debtor]) memMap[r.debtor] = [];
-            memMap[r.debtor].push(`${r.item}${r.instInfo?`(${r.instInfo})`:''} $${parseFloat(r.amt).toLocaleString()}`);
-        });
-        for(let m in memMap) {
-            const sum = memMap[m].reduce((s, row) => s + parseInt(row.split('$')[1].replace(/,/g,'')), 0);
-            text += `\n👤 ${m}：\n` + memMap[m].join('\n') + `\n💰 總計：$${sum.toLocaleString()}\n`;
-        }
-        navigator.clipboard.writeText(text).then(() => alert("已複製！"));
+        fetch(`https://api.github.com/gists/${settings.gistId}`, { method: "PATCH", headers: {"Authorization": auth}, body: JSON.stringify({ files: { "card_data.json": { content: JSON.stringify(db) } } }) }).then(res => { document.getElementById('syncStatus').innerText = res.ok ? "📡 同步成功 " + new Date().toLocaleTimeString() : "📡 同步失敗"; });
     }
 
     function parseSms() {
-        const t = document.getElementById('ai_text').value;
-        const amtM = t.match(/(金額|共|NT\$|幣)\s?(\d+)|(\d+)\s?元/);
+        const t = document.getElementById('ai_text').value, amtM = t.match(/(金額|共|NT\$|幣)\s?(\d+)|(\d+)\s?元/), dateM = t.match(/(\d{2,3})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})/);
         if (amtM) document.getElementById('f_amt').value = amtM[2] || amtM[3];
-        const dateM = t.match(/(\d{2,3})[年\/\-\.](\d{1,2})[月\/\-\.](\d{1,2})/);
-        if (dateM) {
-            let y = parseInt(dateM[1]); if (y < 200) y += 1911;
-            document.getElementById('f_date').value = `${y}-${dateM[2].padStart(2,'0')}-${dateM[3].padStart(2,'0')}`;
-            autoPredictMonth();
-        }
+        if (dateM) { let y = parseInt(dateM[1]); if (y < 200) y += 1911; document.getElementById('f_date').value = `${y}-${dateM[2].padStart(2,'0')}-${dateM[3].padStart(2,'0')}`; autoPredictMonth(); }
     }
 
     window.onload = () => {
-        if(settings.token) {
-            document.getElementById('cfg_token').value = settings.token;
-            document.getElementById('cfg_gist').value = settings.gistId;
-        }
-        updateUI();
-        document.getElementById('f_date').valueAsDate = new Date();
-        autoPredictMonth();
+        if(settings.token) { document.getElementById('cfg_token').value = settings.token; document.getElementById('cfg_gist').value = settings.gistId; }
+        updateUI(); document.getElementById('f_date').valueAsDate = new Date(); autoPredictMonth();
     };
 </script>
 </body>
